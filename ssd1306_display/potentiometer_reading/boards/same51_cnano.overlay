@@ -1,0 +1,41 @@
+#include <dt-bindings/sam/sam_d5x_e5x/atsame51/atsame51j20a-pinctrl.h>
+#include <zephyr/dt-bindings/adc/adc.h>
+
+/{
+    chosen {
+        zephyr,display = &ssd1306;
+    };
+    
+    zephyr,user {
+		io-channels = <&adc0 7>;
+	};
+};
+
+&sercom2 {
+    ssd1306: ssd1306@3d {
+        compatible = "solomon,ssd1306b";
+        reg = <0x3d>;
+        segment-offset = <0>;
+        page-offset = <0>;
+        display-offset = <0>;
+        multiplex-ratio = <63>;
+        prechargep = <0x22>;
+        height = <64>;
+        width = <128>;
+        segment-remap;
+        com-invdir;
+    };
+};
+
+&adc0 {
+    #address-cells = <1>;
+    #size-cells = <0>;
+    channel@7 {
+		reg = <7>;
+		zephyr,gain = "ADC_GAIN_1";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,resolution = <12>;
+		zephyr,input-positive = <7>;
+	};
+};
