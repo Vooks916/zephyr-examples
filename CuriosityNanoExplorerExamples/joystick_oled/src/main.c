@@ -1,5 +1,5 @@
 /*
- * Joystick + OLED demo for PIC32CM PL10 Curiosity Nano on the Curiosity Nano Explorer.
+ * Joystick + OLED demo for PIC32CM PL10, SAMD21, and SAME51 Curiosity Nanos on the Curiosity Nano Explorer.
  *
  *  - A dot is drawn on the 128x64 SSD1306 OLED.
  *  - Joystick UP/DOWN/LEFT/RIGHT moves the dot 4 px (wraps at the edges).
@@ -44,8 +44,13 @@
 #define REPEAT_DELAY_MS 300     /* hold time before auto-repeat starts */
 #define REPEAT_RATE_MS  60      /* auto-repeat interval */
 
-static const struct device *const i2c_bus = DEVICE_DT_GET(DT_NODELABEL(sercom0));
+/*
+ * The MCP23008 sits on the same I2C bus as the OLED, so take the bus from the
+ * OLED's parent node. This works on any board whose overlay puts the OLED under
+ * its I2C controller (SERCOM0 on PL10, SERCOM4 on SAMD21, ...).
+ */
 static const struct device *const display = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
+static const struct device *const i2c_bus = DEVICE_DT_GET(DT_BUS(DT_CHOSEN(zephyr_display)));
 
 /* 1 bit per pixel, vertically tiled (SSD1306 native): byte = 8 vertical pixels, LSB on top */
 static uint8_t framebuf[SCREEN_W * SCREEN_H / 8];
@@ -146,23 +151,27 @@ int main(void)
 {
 	printk("Explorer joystick + OLED demo\n");
 
-	if (!device_is_ready(i2c_bus)) {
-		printk("ERROR: I2C bus (sercom0) not ready\n");
-		return 0;
-	}
-	if (!device_is_ready(display)) {
-		printk("ERROR: OLED display not ready (check I2C address 0x3D)\n");
-		return 0;
-	}
+    if (!device_is_ready(i2c_bus)) {
+        printk("ERROR: I2C bus (%s) not ready\n", i2c_bus->name);
+        return 0;
+    }
+    if (!device_is_ready(display)) {
+        printk("ERROR: OLED display not ready (check I2C address 0x3D)\n");
+        return 0;
+    }
 
-	/* 1 = lit pixel */
-	display_set_pixel_format(display, PIXEL_FORMAT_MONO01);
-	display_blanking_off(display);
+        /* 1 = lit pixel */
+        display_set_pixel_format(display, PIXEL_FORMAT_MONO01);
+        display_blanking_off(display);
 
-	if (ioexp_init()) {
-		printk("ERROR: I/O Expander 2 (MCP23008 @ 0x24) not responding\n");
-		return 0;
-	}
+        printk("I2C bus: %s\n", i2c_bus->name);
+
+        int ret = ioexp_init();
+
+        if (ret) {
+                printk("ERROR: I/O Expander 2 (MCP23008 @ 0x24) not responding (%d)\n", ret);
+                return 0;
+        }
 
 	redraw();
 
