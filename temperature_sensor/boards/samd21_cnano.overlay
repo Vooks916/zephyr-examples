@@ -1,0 +1,12 @@
+/ {
+	aliases {
+		temperature-sensor = &temperature_sensor;
+	};
+};
+
+&sercom4 {
+	temperature_sensor: temperature_sensor@1c {
+		compatible = "microchip,mcp9808";
+		reg = <0x1c>;
+	};
+};
