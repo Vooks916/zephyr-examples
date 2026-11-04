@@ -15,8 +15,8 @@ bool read_temperature(const struct i2c_dt_spec *temperature_sensor, uint8_t *tem
 	i2c_write_buffer[0] = TEMPERATURE_REGISTER_ADDRESS;
 
 	if (i2c_write_read_dt(temperature_sensor,
-			      i2c_write_buffer, sizeof(i2c_write_buffer),
-			      i2c_read_buffer, sizeof(i2c_read_buffer))) {
+	                      i2c_write_buffer, sizeof(i2c_write_buffer),
+	                      i2c_read_buffer, sizeof(i2c_read_buffer))) {
 		return false;
 	}
 
