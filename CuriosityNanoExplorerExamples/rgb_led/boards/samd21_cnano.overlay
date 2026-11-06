@@ -1,0 +1,70 @@
+/*
+ * Curiosity Nano Explorer RGB LED on the SAM D21 Curiosity Nano (samd21_cnano).
+ *
+ * Explorer RGB LED (J309 jumpers fitted) <- CNANO socket analog section:
+ *   RED   = PWM-A = CNANO "PWM3" = PB09
+ *   GREEN = PWM-B = CNANO "PWM4" = PA04
+ *   BLUE  = PWM-C = CNANO "ADC5" = PA05
+ * (Explorer User Guide DS50003716 sec. 5.2/Fig. 10-3 + Curiosity Nano Explorer Pinouts.)
+ *
+ * PB09 only offers TC4/WO1 or TCC3/WO7. The TC PWM driver (pwm_sam0_tc.c) does
+ * not support the SAMD21 TC register layout, so all three LEDs use TCC:
+ *   GREEN PA04 -> TCC0/WO0 (CC0), BLUE PA05 -> TCC0/WO1 (CC1),
+ *   RED   PB09 -> TCC3/WO7 (CC3; TCC3 exists on the SAMD21G17D only).
+ */
+
+/ {
+	aliases {
+		red-pwm-led = &red_pwm_led;
+		green-pwm-led = &green_pwm_led;
+		blue-pwm-led = &blue_pwm_led;
+	};
+
+	rgb_pwmleds {
+		compatible = "pwm-leds";
+
+		red_pwm_led: red_pwm_led {
+			pwms = <&tcc3 3 PWM_MSEC(20)>;
+			label = "RGB red (PWM-A)";
+		};
+
+		green_pwm_led: green_pwm_led {
+			pwms = <&tcc0 0 PWM_MSEC(20)>;
+			label = "RGB green (PWM-B)";
+		};
+
+		blue_pwm_led: blue_pwm_led {
+			pwms = <&tcc0 1 PWM_MSEC(20)>;
+			label = "RGB blue (PWM-C)";
+		};
+	};
+};
+
+&pinctrl {
+	tcc0_rgb_default: tcc0_rgb_default {
+		group1 {
+			pinmux = <PA4E_TCC0_WO0>,	/* GREEN */
+				 <PA5E_TCC0_WO1>;	/* BLUE */
+		};
+	};
+
+	tcc3_rgb_default: tcc3_rgb_default {
+		group1 {
+			pinmux = <PB9F_TCC3_WO7>;	/* RED */
+		};
+	};
+};
+
+/* Board LED0 (PB10, TCC0/WO4) shares TCC0; drop it from TCC0's pinctrl. */
+&tcc0 {
+	pinctrl-0 = <&tcc0_rgb_default>;
+};
+
+&tcc3 {
+	status = "okay";
+	compatible = "atmel,sam0-tcc-pwm";
+	prescaler = <4>;
+	#pwm-cells = <2>;
+	pinctrl-0 = <&tcc3_rgb_default>;
+	pinctrl-names = "default";
+};
