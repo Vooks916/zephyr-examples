@@ -1,13 +1,3 @@
-/*
- * Copyright (c) 2016 Intel Corporation
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
-/**
- * @file Sample app to demonstrate PWM-based RGB LED control
- */
-
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/device.h>
@@ -20,14 +10,23 @@ static const struct pwm_dt_spec green_pwm_led =
 static const struct pwm_dt_spec blue_pwm_led =
 	PWM_DT_SPEC_GET(DT_ALIAS(blue_pwm_led));
 
-#define STEP_SIZE PWM_USEC(2000)
+#define HUE_STEPS   768   /* 6 segments x 128 steps */
+#define SEG_STEPS   128
+#define DELAY_MS    20    /* total cycle = 768 * 20 ms ≈ 15 s */
+
+static int set_color(const struct pwm_dt_spec *led, uint32_t level)
+{
+	/* level: 0..SEG_STEPS */
+	uint32_t pulse = (uint32_t)(((uint64_t)led->period * level) / SEG_STEPS);
+
+	return pwm_set_pulse_dt(led, pulse);
+}
 
 int main(void)
 {
-	uint32_t pulse_red, pulse_green, pulse_blue; /* pulse widths */
 	int ret;
 
-	printk("PWM-based RGB LED control\n");
+	printk("Smooth RGB transition\n");
 
 	if (!pwm_is_ready_dt(&red_pwm_led) ||
 	    !pwm_is_ready_dt(&green_pwm_led) ||
@@ -37,40 +36,32 @@ int main(void)
 	}
 
 	while (1) {
-		for (pulse_red = 0U; pulse_red <= red_pwm_led.period;
-		     pulse_red += STEP_SIZE) {
-			ret = pwm_set_pulse_dt(&red_pwm_led, pulse_red);
+		for (int h = 0; h < HUE_STEPS; h++) {
+			int seg = h / SEG_STEPS;
+			uint32_t up = h % SEG_STEPS;
+			uint32_t down = SEG_STEPS - up;
+			uint32_t r, g, b;
+
+			switch (seg) {
+			case 0: r = SEG_STEPS; g = up;        b = 0;         break; /* red -> yellow */
+			case 1: r = down;      g = SEG_STEPS; b = 0;         break; /* yellow -> green */
+			case 2: r = 0;         g = SEG_STEPS; b = up;        break; /* green -> cyan */
+			case 3: r = 0;         g = down;      b = SEG_STEPS; break; /* cyan -> blue */
+			case 4: r = up;        g = 0;         b = SEG_STEPS; break; /* blue -> magenta */
+			default: r = SEG_STEPS; g = 0;        b = down;      break; /* magenta -> red */
+			}
+
+			ret = set_color(&red_pwm_led, r);
+			if (ret == 0) { ret = set_color(&green_pwm_led, g); }
+			if (ret == 0) { ret = set_color(&blue_pwm_led, b); }
 			if (ret != 0) {
-				printk("Error %d: red write failed\n", ret);
+				printk("Error %d: PWM write failed\n", ret);
 				return 0;
 			}
 
-			for (pulse_green = 0U;
-			     pulse_green <= green_pwm_led.period;
-			     pulse_green += STEP_SIZE) {
-				ret = pwm_set_pulse_dt(&green_pwm_led,
-						       pulse_green);
-				if (ret != 0) {
-					printk("Error %d: green write failed\n",
-					       ret);
-					return 0;
-				}
-
-				for (pulse_blue = 0U;
-				     pulse_blue <= blue_pwm_led.period;
-				     pulse_blue += STEP_SIZE) {
-					ret = pwm_set_pulse_dt(&blue_pwm_led,
-							       pulse_blue);
-					if (ret != 0) {
-						printk("Error %d: "
-						       "blue write failed\n",
-						       ret);
-						return 0;
-					}
-					k_sleep(K_SECONDS(1));
-				}
-			}
+			k_sleep(K_MSEC(DELAY_MS));
 		}
 	}
+
 	return 0;
 }
