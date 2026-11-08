@@ -9,7 +9,7 @@
 #error "No suitable devicetree overlay specified"
 #endif
 
-#define VCNL4200_ADDR      0x51 
+#define VCNL4200_ADDR      0x51  //VCNL4200 address on the I2C bus
 #define VCNL4200_PS_CONF1   0x03 //PS_CONF1 is a 2 byte register that handles basic PS function settings
 
 static const struct i2c_dt_spec vcnl4200 = I2C_DT_SPEC_GET(DT_NODELABEL(vcnl4200));
@@ -35,13 +35,13 @@ int main() {
 		return 0;
 	}
 
-	if (vcnl4200_init(&vcnl4200)) {
+	if (vcnl4200_init(&vcnl4200)) { // initialize VCNL4200 configuration register
 		printk("Proximity sensor initialization failed!\n");
 		return 0;
 	}
 
     while(1) {
-        uint8_t font_height;
+        uint8_t font_height; // used to choose line number
 		cfb_get_font_size(ssd1306, 0, 0, &font_height);
 
         int ret = cfb_framebuffer_clear(ssd1306, false);
