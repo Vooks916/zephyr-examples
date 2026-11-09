@@ -1,0 +1,61 @@
+/*
+ * Curiosity Nano Explorer add-ons for the SAM D21 Curiosity Nano (samd21_cnano).
+ *
+ * Explorer I2C bus  -> CNANO socket I2C SDA/SCL -> SAMD21 PA12 (SERCOM4 PAD0) / PA13 (SERCOM4 PAD1)
+ *   - OLED (SSD1306, 128x64)          @ 0x3D
+ *   - I/O Expander 2 (MCP23008)       @ 0x24  (joystick + SW1..SW3, read directly in main.c)
+ *
+ * The samd21_cnano board already enables SERCOM4 as I2C; this overlay restates
+ * it explicitly (pins with input-enable, clock, compatible) and adds the OLED.
+ */
+
+#include <zephyr/dt-bindings/i2c/i2c.h>
+
+/ {
+	chosen {
+		zephyr,display = &oled;
+	};
+};
+
+&pinctrl {
+	sercom4_i2c_default: sercom4_i2c_default {
+		group1 {
+			pinmux = <PA12D_SERCOM4_PAD0>,	/* SDA */
+				 <PA13D_SERCOM4_PAD1>;	/* SCL */
+			input-enable;
+		};
+	};
+};
+
+&porta {
+	status = "okay";
+};
+
+&sercom4 {
+	compatible = "atmel,sam0-i2c";
+	#address-cells = <1>;
+	#size-cells = <0>;
+	clock-frequency = <I2C_BITRATE_FAST>;
+	/* SERCOM4 core clock (GCLK ID 0x18) from GCLK0 (48 MHz), APB-C mask bit 6 */
+	clocks = <&gclk 0x18>, <&pm 0x20 6>;
+	clock-names = "GCLK", "PM";
+	atmel,assigned-clocks = <&gclk 0>;
+	atmel,assigned-clock-names = "GCLK";
+	pinctrl-0 = <&sercom4_i2c_default>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	oled: ssd1306@3d {
+		compatible = "solomon,ssd1306";
+		reg = <0x3d>;
+		width = <128>;
+		height = <64>;
+		segment-offset = <0>;
+		page-offset = <0>;
+		display-offset = <0>;
+		multiplex-ratio = <63>;
+		segment-remap;
+		com-invdir;
+		prechargep = <0x22>;
+	};
+};

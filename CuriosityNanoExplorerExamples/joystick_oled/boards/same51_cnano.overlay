@@ -1,0 +1,46 @@
+/*
+ * Curiosity Nano Explorer add-ons for the SAM E51 Curiosity Nano (same51_cnano).
+ *
+ * Explorer I2C bus  -> CNANO socket I2C SDA/SCL -> SAME51 PA12 (SERCOM2 PAD0) / PA13 (SERCOM2 PAD1)
+ *   - OLED (SSD1306, 128x64)          @ 0x3D
+ *   - I/O Expander 2 (MCP23008)       @ 0x24  (joystick + SW1..SW3, read directly in main.c)
+ *
+ * The same51_cnano board already enables SERCOM2 as a microchip,sercom-g1-i2c
+ * controller at 400 kHz with its core clock on GCLK1 (60 MHz). This overlay
+ * only adds input-enable on the I2C pins and the OLED node.
+ */
+
+/ {
+	chosen {
+		zephyr,display = &oled;
+	};
+};
+
+&pinctrl {
+	sercom2_i2c_default: sercom2_i2c_default {
+		group1 {
+			pinmux = <PA12C_SERCOM2_PAD0>,	/* SDA */
+				 <PA13C_SERCOM2_PAD1>;	/* SCL */
+			/* Keep the SERCOM input buffer on so it can sample the bus */
+			input-enable;
+		};
+	};
+};
+
+&sercom2 {
+	status = "okay";
+
+	oled: ssd1306@3d {
+		compatible = "solomon,ssd1306";
+		reg = <0x3d>;
+		width = <128>;
+		height = <64>;
+		segment-offset = <0>;
+		page-offset = <0>;
+		display-offset = <0>;
+		multiplex-ratio = <63>;
+		segment-remap;
+		com-invdir;
+		prechargep = <0x22>;
+	};
+};
