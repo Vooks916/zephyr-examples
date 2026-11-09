@@ -1,0 +1,21 @@
+#include <dt-bindings/sam/sam_d5x_e5x/atsame51/atsame51j20a-pinctrl.h>
+#include <zephyr/dt-bindings/adc/adc.h>
+
+/{
+    zephyr,user {
+		io-channels = <&adc0 7>;
+	};
+};
+
+&adc0 {
+    #address-cells = <1>;
+    #size-cells = <0>;
+    channel@7 {
+		reg = <7>;
+		zephyr,gain = "ADC_GAIN_1";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,resolution = <12>;
+		zephyr,input-positive = <7>;
+	};
+};
