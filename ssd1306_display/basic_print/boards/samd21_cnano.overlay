@@ -1,0 +1,24 @@
+#include <dt-bindings/pinctrl/samd21-da1gXabcd-pinctrl.h>
+#include <zephyr/dt-bindings/i2c/i2c.h> 
+
+/{
+    chosen {
+        zephyr,display = &ssd1306;
+    };
+};
+
+&sercom4 {
+    ssd1306: ssd1306@3d {
+        compatible = "solomon,ssd1306b";
+        reg = <0x3d>;
+        segment-offset = <0>;
+        page-offset = <0>;
+        display-offset = <0>;
+        multiplex-ratio = <63>;
+        prechargep = <0x22>;
+        height = <64>;
+        width = <128>;
+        segment-remap;
+        com-invdir;
+    };
+};
