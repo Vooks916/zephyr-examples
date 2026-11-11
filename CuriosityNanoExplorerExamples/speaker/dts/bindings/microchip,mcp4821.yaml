@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  Microchip MCP4821 single-channel 12-bit SPI DAC with internal 2.048 V reference.
+  Write-only device (no MISO). One channel (0).
+
+compatible: "microchip,mcp4821"
+
+include: [dac-controller.yaml, spi-device.yaml]
+
+properties:
+  "#io-channel-cells":
+    const: 1
+
+  ldac-gpios:
+    type: phandle-array
+    description: |
+      Optional LDAC pin. The driver drives it to the physical LOW level at
+      init so the output latches on every CS rising edge. Specify it with
+      GPIO_ACTIVE_HIGH so "inactive" == physical low. If omitted, LDAC
+      must be held low in hardware.
+
+  gain-1x:
+    type: boolean
+    description: |
+      Select GA=1 (1x gain, 2.048 V full scale). If absent, GA=0 (2x gain,
+      4.096 V full scale, clipped at VDD = 3.3 V on the Explorer).
