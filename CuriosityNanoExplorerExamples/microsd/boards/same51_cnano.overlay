@@ -1,0 +1,24 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/*
+ * Curiosity Nano Explorer microSD socket on the SAM E51 Curiosity Nano.
+ * The socket is on the Explorer SPI bus (SERCOM1: PA16 MOSI, PA17 SCK,
+ * PA19 MISO) with its chip select on Explorer IO 25, which is PB06.
+ * The board already uses PA18 as chip select 0 for the SPI EEPROM, so
+ * the SD card is added as chip select 1.
+ */
+
+&sercom1 {
+	cs-gpios = <&porta 18 GPIO_ACTIVE_LOW>, <&portb 6 GPIO_ACTIVE_LOW>;
+
+	sdcard: sdhc@1 {
+		compatible = "zephyr,sdhc-spi-slot";
+		reg = <1>;
+		spi-max-frequency = <8000000>;
+
+		mmc {
+			compatible = "zephyr,sdmmc-disk";
+			disk-name = "SD";
+		};
+	};
+};
