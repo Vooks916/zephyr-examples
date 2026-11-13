@@ -6,14 +6,20 @@
 	aliases {
 		eeprom = &eeprom0;
 	};
+
+	zephyr,user {
+		io-channels = <&adc0 7>;
+	};
 };
 
 &sercom2 {
 	eeprom0: eeprom@54 {
-		compatible = "microchip,at24cm02", "zephyr,i2c-target-eeprom";
+		compatible = "atmel,at24";
 		reg = <0x54>;
-		size = <256>;
-		status = "okay";
+		size = <1024>;
+		pagesize = <256>;
+		address-width = <16>;
+		timeout = <10>;
 	};
 
 	ssd1306: ssd1306@3d {
@@ -28,5 +34,20 @@
 		width = <128>;
 		segment-remap;
 		com-invdir;
+	};
+};
+
+&adc0 {
+	prescaler = <4>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	channel@7 {
+		reg = <7>;
+		zephyr,gain = "ADC_GAIN_1";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,resolution = <12>;
+		zephyr,input-positive = <7>;
 	};
 };
