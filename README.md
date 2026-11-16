@@ -2,6 +2,32 @@
 
 This repository contains sample Zephyr applications that run on the Curiosity Nano development boards. Each application demonstrates the use of a specific peripheral on the Curiosity Nano Explorer.
 
+## Setup
+
+It is assumed Zephyr has been installed according to the [Getting Started Guide](https://docs.zephyrproject.org/latest/develop/getting_started/index.html).
+
+Replace `~/zephyrproject` in the following commands with the path to the workspace.
+
+1. Add a remote for our Zephyr fork:
+
+```
+cd ~/zephyrproject/zephyr
+git remote add capstone https://github.com/Vooks916/zephyr
+```
+
+2. Fetch and checkout the demo branch of our fork:
+
+```
+git fetch capstone demo
+git checkout capstone/demo
+```
+
+3. Update the hal_atmel module:
+
+```
+west update hal_atmel
+```
+
 ## Supported Board Information
 
 |Board|Board Name|PyOCD Pack|
