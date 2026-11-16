@@ -1,0 +1,59 @@
+/*
+ * SAMD21 Curiosity Nano + Curiosity Nano Explorer: MCP4821 speaker DAC.
+ * Source: Curiosity-Nano-Explorer-Pinouts.pdf (SAM D21 page):
+ *   SPI MOSI = PA16 (SERCOM1 PAD0), SPI SCK = PA17 (SERCOM1 PAD1),
+ *   SPI MISO = PA19 (SERCOM1 PAD3), IO 26 DAC CS = PA27,
+ *   IO 12 SPEAKER ENABLE = PB02, console CDC = SERCOM5 (PA22/PB22).
+ *   IO 36 DAC LDAC: NOT routed to a SAMD21 CNANO pin -> no ldac-gpios here.
+ * Pinmux macros from hal_atmel samd21-da1gXabcd-pinctrl.h (assumed already
+ * included by the board's pinctrl dtsi; if not, add
+ * #include <dt-bindings/pinctrl/samd21-da1gXabcd-pinctrl.h> at top).
+ * DOPO=0: DO=PAD0, SCK=PAD1. DIPO=3: DI=PAD3.
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+&pinctrl {
+	sercom1_spi_default: sercom1_spi_default {
+		group1 {
+			pinmux = <PA16C_SERCOM1_PAD0>, /* MOSI */
+				 <PA17C_SERCOM1_PAD1>, /* SCK  */
+				 <PA19C_SERCOM1_PAD3>; /* MISO (unused by DAC, shared bus) */
+		};
+	};
+};
+
+&sercom1 {
+	compatible = "atmel,sam0-spi";
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+	dipo = <3>;
+	dopo = <0>;
+	pinctrl-0 = <&sercom1_spi_default>;
+	pinctrl-names = "default";
+	cs-gpios = <&porta 27 GPIO_ACTIVE_LOW>; /* IO 26 DAC CS */
+
+	mcp4821: dac@0 {
+		compatible = "microchip,mcp4821";
+		reg = <0>;
+		spi-max-frequency = <1000000>;
+		#io-channel-cells = <1>;
+		gain-1x;
+	};
+};
+
+/ {
+	speaker_ctrl {
+		compatible = "gpio-leds";
+		speaker_en: speaker_en {
+			gpios = <&portb 2 GPIO_ACTIVE_HIGH>; /* IO 12 SPEAKER ENABLE */
+			label = "SPEAKER_ENABLE";
+		};
+	};
+
+	aliases {
+		speaker-dac = &mcp4821;
+		speaker-enable = &speaker_en;
+	};
+};
