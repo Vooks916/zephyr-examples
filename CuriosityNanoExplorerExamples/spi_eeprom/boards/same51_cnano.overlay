@@ -1,0 +1,39 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+*/
+
+#include <freq.h>
+
+/{
+    chosen {
+        zephyr,display = &ssd1306;
+    };
+};
+
+&sercom1 {
+    eeprom: eeprom@0 {
+    compatible = "microchip,25csm04", "atmel,at25";
+    reg = <0>;
+    size = <DT_SIZE_K(512)>;
+    pagesize = <256>;
+    address-width = <24>;
+    spi-max-frequency = <DT_FREQ_M(8)>;
+    timeout = <5>;
+  };
+};
+
+&sercom2 {
+    ssd1306: ssd1306@3d {
+        compatible = "solomon,ssd1306b";
+        reg = <0x3d>;
+        segment-offset = <0>;
+        page-offset = <0>;
+        display-offset = <0>;
+        multiplex-ratio = <63>;
+        prechargep = <0x22>;
+        height = <64>;
+        width = <128>;
+        segment-remap;
+        com-invdir;
+    };
+};
