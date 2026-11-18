@@ -1,3 +1,17 @@
+/*
+ * Curiosity Nano Explorer 25CSM04 SPI EEPROM Test
+ * Reads the last 4 joystick inputs from the user and determines if it matches
+ * the current password. If the last 4 joystick inputs match the password, then the
+ * screen will say "UNLOCKED", otherwise it will say "LOCKED".
+ * 
+ * Password note: The initial password is UP, RIGHT, DOWN, LEFT (U R D L) but
+ * the moment that the user presses the SW3 button the password is changed to the
+ * last 4 joystick inputs. The password is written into EEPROM so even upon turning
+ * the power off the most recent password will remain.
+ * 
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include <zephyr/devicetree.h>
 #include <zephyr/device.h>
 #include <zephyr/display/cfb.h>
@@ -5,10 +19,6 @@
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/kernel.h>
 #include <stdio.h>
-
-#if !DT_HAS_CHOSEN(zephyr_display)
-#error "No suitable devicetree overlay specified"
-#endif
 
 /* ---------- MCP23008 (I/O Expander 2) ---------- */
 #define IOEXP2_ADDR     0x24
@@ -25,8 +35,6 @@
 
 /* ---------- Timing ---------- */
 #define POLL_MS         20      /* joystick polling period */
-#define REPEAT_DELAY_MS 300     /* hold time before auto-repeat starts */
-#define REPEAT_RATE_MS  60      /* auto-repeat interval */
 
 static const struct device* ssd1306 = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 static const struct device* eeprom  = DEVICE_DT_GET(DT_NODELABEL(eeprom));
@@ -98,21 +106,21 @@ int main() {
         return 0;
     }
 
-    if (cfb_framebuffer_init(ssd1306)) { // initialize cfb frame buffer to communicate with ssd1306
+    if (cfb_framebuffer_init(ssd1306)) { // initialize CFB for use with SSD1306
 		return 0;
 	}
 
-    if (ioexp_init() != 0) {
+    if (ioexp_init() != 0) { // initialize I/O Expander 2
         return 0;
     }
 
-    if (eeprom_read(eeprom, 0x0000, &password, sizeof(password)) != 0) // ensure eeprom is reading correctly
+    if (eeprom_read(eeprom, 0x0000, &password, sizeof(password)) != 0) // ensure EEPROM is reading correctly
 	{   
 		return 0;
 	}
 
-    if(password == 0xFFFF) { // no password set
-        password = 0x0123; // up right down left
+    if(password == 0xFFFF) { // if there is no password currently in EEPROM
+        password = 0x0123;   // set the password to up right left down
     }
 
     uint8_t prev = 0;
@@ -162,7 +170,6 @@ int main() {
 		uint8_t now = (uint8_t)pressed;
 		uint8_t new_presses = now & ~prev;
 
-        /* directions: move on press, then auto-repeat while held */
 		uint8_t dirs = now & JOY_DIR_MASK;
 		if (new_presses & JOY_DIR_MASK) {
 			handle_move(dirs);
@@ -170,85 +177,15 @@ int main() {
 		/* ----------- END JOYSTICK INPUT --------------- */
 
 		/* --------- MESSAGE CONSTRUCTION ----------------*/
-        char message[8];
-		uint16_t firstInput = (past_moves & 0xF000) >> 12; // get first byte
-		uint16_t secondInput = (past_moves & 0x0F00) >> 8; // get second byte
-		uint16_t thirdInput = (past_moves & 0x00F0) >> 4;  // get third byte
-		uint16_t fourthInput = past_moves & 0x000F;        // get fourth byte
+		char message[8];
+		const char directions[] = {'U', 'R', 'D', 'L'};
 
-		switch(firstInput){
-			case(0):
-			message[0] = 'U'; // up
-			break;
-			case(1):
-			message[0] = 'R'; // right
-			break;
-			case(2):
-			message[0] = 'D'; // down
-			break;
-			case(3):
-			message[0] = 'L'; // left
-			break;
-			default:
-			message[0] = 'E'; // empty
-		}
+		for (int i = 0; i < 4; i++)
+		{
+			uint16_t input = (past_moves >> (12 - (i * 4))) & 0xF;
 
-		message[1] = ' ';
-
-		switch(secondInput){
-			case(0):
-			message[2] = 'U'; // up
-			break;
-			case(1):
-			message[2] = 'R'; // right
-			break;
-			case(2):
-			message[2] = 'D'; // down
-			break;
-			case(3):
-			message[2] = 'L'; // left
-			break;
-			default:
-			message[2] = 'E'; // empty
-		}
-
-		message[3] = ' ';
-
-		switch(thirdInput){
-			case(0):
-			message[4] = 'U'; // up
-			break;
-			case(1):
-			message[4] = 'R'; // right
-			break;
-			case(2):
-			message[4] = 'D'; // down
-			break;
-			case(3):
-			message[4] = 'L'; // left
-			break;
-			default:
-			message[4] = 'E'; // empty
-
-		}
-
-		message[5] = ' ';
-
-		switch(fourthInput){
-			case(0):
-			message[6] = 'U'; // up
-			break;
-			case(1):
-			message[6] = 'R'; // right
-			break;
-			case(2):
-			message[6] = 'D'; // down
-			break;
-			case(3):
-			message[6] = 'L'; // left
-			break;
-			default:
-			message[6] = 'E'; // empty
+			message[i * 2] = (input < 4) ? directions[input] : 'E';
+			message[i * 2 + 1] = ' ';
 		}
 
 		message[7] = '\0';
