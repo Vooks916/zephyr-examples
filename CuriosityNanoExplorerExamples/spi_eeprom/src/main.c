@@ -20,25 +20,19 @@
 #define JOY_LEFT        BIT(1)
 #define JOY_DOWN        BIT(2)
 #define JOY_RIGHT       BIT(3)
-#define JOY_PUSH        BIT(4)
-#define JOY_DIR_MASK    (JOY_UP | JOY_LEFT | JOY_DOWN | JOY_RIGHT)
+#define SW3             BIT(5)
+#define JOY_DIR_MASK    (JOY_UP | JOY_LEFT | JOY_DOWN | JOY_RIGHT | SW3)
 
 /* ---------- Timing ---------- */
 #define POLL_MS         20      /* joystick polling period */
 #define REPEAT_DELAY_MS 300     /* hold time before auto-repeat starts */
 #define REPEAT_RATE_MS  60      /* auto-repeat interval */
 
-enum Direction {
-	UP,
-	RIGHT,
-	DOWN,
-	LEFT
-};
-
 static const struct device* ssd1306 = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 static const struct device* eeprom  = DEVICE_DT_GET(DT_NODELABEL(eeprom));
 static const struct device* i2c_bus = DEVICE_DT_GET(DT_BUS(DT_CHOSEN(zephyr_display)));
-static uint16_t past_moves = 0xFFFF;
+static uint16_t past_moves = 0xFFFF; // used to represent the past 4 moves
+static uint16_t password = 0;
 
 static int ioexp_init(void)
 {
@@ -63,32 +57,34 @@ static int ioexp_read_pressed(void)
 static void handle_move(uint8_t dirs)
 {
 	if (dirs & JOY_UP) {
-        cfb_print(ssd1306, "UP", 0, 32);
 		past_moves <<= 4;
         return;
 	}
 	if (dirs & JOY_RIGHT) {
-        cfb_print(ssd1306, "RIGHT", 0, 32);
 		past_moves <<= 4;
 		past_moves |= 0x1;
         return;
 	}
 	if (dirs & JOY_DOWN) {
-        cfb_print(ssd1306, "DOWN", 0, 32);
 		past_moves <<= 4;
 		past_moves |= 0x2;
         return;
 	}
 	if (dirs & JOY_LEFT) {
-        cfb_print(ssd1306, "LEFT", 0, 32);
 		past_moves <<= 4;
 		past_moves |= 0x3;
         return;
 	}
+	if(dirs & SW3){
+		password = past_moves;
+		int ret = eeprom_write(eeprom, 0x0000, &password, sizeof(password));
+		if(ret != 0) {
+			return;
+		}
+	}
 }
 
 int main() {
-    uint16_t password = 0;
 
 	if (!device_is_ready(ssd1306)) {
 		return 0;
@@ -120,9 +116,8 @@ int main() {
     }
 
     uint8_t prev = 0;
-	int64_t next_repeat = 0;
 
-    while(1){
+    while(1) {
         uint8_t font_height; //initially 16 pixels, used to select row # for text
         int ret = 0; //used for error handling
 
@@ -166,25 +161,20 @@ int main() {
 
 		uint8_t now = (uint8_t)pressed;
 		uint8_t new_presses = now & ~prev;
-		int64_t t = k_uptime_get();
 
         /* directions: move on press, then auto-repeat while held */
 		uint8_t dirs = now & JOY_DIR_MASK;
 		if (new_presses & JOY_DIR_MASK) {
 			handle_move(dirs);
-			next_repeat = t + REPEAT_DELAY_MS;
-		} else if (dirs && t >= next_repeat) {
-			handle_move(dirs);
-			next_repeat = t + REPEAT_RATE_MS;
 		}
 		/* ----------- END JOYSTICK INPUT --------------- */
 
 		/* --------- MESSAGE CONSTRUCTION ----------------*/
         char message[8];
-		uint16_t firstInput = (past_moves & 0xF000) >> 12;
-		uint16_t secondInput = (past_moves & 0x0F00) >> 8;
-		uint16_t thirdInput = (past_moves & 0x00F0) >> 4;
-		uint16_t fourthInput = past_moves & 0x000F;
+		uint16_t firstInput = (past_moves & 0xF000) >> 12; // get first byte
+		uint16_t secondInput = (past_moves & 0x0F00) >> 8; // get second byte
+		uint16_t thirdInput = (past_moves & 0x00F0) >> 4;  // get third byte
+		uint16_t fourthInput = past_moves & 0x000F;        // get fourth byte
 
 		switch(firstInput){
 			case(0):
