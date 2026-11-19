@@ -1,0 +1,63 @@
+/*
+ * Curiosity Nano Explorer add-ons for the PIC32CM PL10 Curiosity Nano.
+ *
+ * Explorer I2C bus  -> CNANO socket I2C SDA/SCL -> PL10 PA00 (SERCOM0 PAD0) / PA01 (SERCOM0 PAD1)
+ *   - OLED (SSD1306, 128x64)          @ 0x3D
+ *   - I/O Expander 2 (MCP23008)       @ 0x24  (joystick + SW1..SW3, read directly in main.c)
+ */
+
+#include <zephyr/dt-bindings/i2c/i2c.h>
+
+/ {
+	chosen {
+		zephyr,display = &oled;
+	};
+};
+
+&pinctrl {
+	sercom0_i2c_default: sercom0_i2c_default {
+		group1 {
+			pinmux = <PA0C_SERCOM0_PAD0>,	/* SDA */
+				 <PA1C_SERCOM0_PAD1>;	/* SCL */
+			/* Required: without the input buffer the SERCOM can't sample the bus */
+			input-enable;
+		};
+	};
+};
+
+/* Feed SERCOM0 core clock from GCLK0 (24 MHz), same as the console SERCOM1 */
+&gclkperiph {
+	sercom0 {
+		subsystem = <CLOCK_MCHP_GCLKPERIPH_ID_SERCOM0_CORE>;
+		gclkperiph-src = "gclk0";
+		gclkperiph-en = <1>;
+	};
+};
+
+&porta {
+	status = "okay";
+};
+
+&sercom0 {
+	compatible = "microchip,sercom-g1-i2c";
+	#address-cells = <1>;
+	#size-cells = <0>;
+	clock-frequency = <I2C_BITRATE_FAST>;
+	pinctrl-0 = <&sercom0_i2c_default>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	oled: ssd1306@3d {
+		compatible = "solomon,ssd1306";
+		reg = <0x3d>;
+		width = <128>;
+		height = <64>;
+		segment-offset = <0>;
+		page-offset = <0>;
+		display-offset = <0>;
+		multiplex-ratio = <63>;
+		segment-remap;
+		com-invdir;
+		prechargep = <0x22>;
+	};
+};

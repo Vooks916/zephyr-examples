@@ -1,0 +1,74 @@
+/*
+ * Curiosity Nano Explorer RGB LED on the SAM E51 Curiosity Nano (same51_cnano).
+ *
+ * Explorer RGB LED (J309 jumpers fitted) <- CNANO socket analog section:
+ *   RED   = PWM-A = CNANO "PWM3" = PA10 -> TCC0/WO2 (CC2, mux F)
+ *   GREEN = PWM-B = CNANO "PWM4" = PA11 -> TCC0/WO3 (CC3, mux F)
+ *   BLUE  = PWM-C = CNANO "ADC5" = PB09 -> TC4/WO1  (mux E, no TCC on PB09)
+ * (Explorer User Guide DS50003716 sec. 5.2/Fig. 10-3 + Curiosity Nano Explorer Pinouts.)
+ *
+ * This board uses the Microchip "g1" drivers (pwm_mchp_tcc_g1.c / pwm_mchp_tc_g1.c),
+ * not pwm_sam0_tc.c.
+ */
+
+/ {
+	aliases {
+		red-pwm-led = &red_pwm_led;
+		green-pwm-led = &green_pwm_led;
+		blue-pwm-led = &blue_pwm_led;
+	};
+
+	rgb_pwmleds {
+		compatible = "pwm-leds";
+
+		red_pwm_led: red_pwm_led {
+			pwms = <&tcc0 2 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
+			label = "RGB red (PWM-A)";
+		};
+
+		green_pwm_led: green_pwm_led {
+			pwms = <&tcc0 3 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
+			label = "RGB green (PWM-B)";
+		};
+
+		blue_pwm_led: blue_pwm_led {
+			/* TC 16-bit MPWM: CC0 is the period, output is WO1 (channel 1) */
+			pwms = <&tc4 1 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
+			label = "RGB blue (PWM-C)";
+		};
+	};
+};
+
+&pinctrl {
+	tcc0_rgb_default: tcc0_rgb_default {
+		group1 {
+			pinmux = <PA10F_TCC0_WO2>,	/* RED */
+				 <PA11F_TCC0_WO3>;	/* GREEN */
+		};
+	};
+
+	tc4_rgb_default: tc4_rgb_default {
+		group1 {
+			pinmux = <PB9E_TC4_WO1>;	/* BLUE */
+		};
+	};
+};
+
+&tcc0 {
+	compatible = "microchip,tcc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tcc0_rgb_default>;
+	pinctrl-names = "default";
+	prescaler = <8>;
+	status = "okay";
+};
+
+&tc4 {
+	compatible = "microchip,tc-g1-pwm";
+	#pwm-cells = <3>;
+	pinctrl-0 = <&tc4_rgb_default>;
+	pinctrl-names = "default";
+	/* 16-bit: 20 ms period needs f <= 3.27 MHz -> GCLK / 64 */
+	prescaler = <64>;
+	status = "okay";
+};

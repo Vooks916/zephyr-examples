@@ -1,0 +1,24 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/*
+ * Curiosity Nano Explorer WS2812B RGB LEDs on the SAM E51 Curiosity Nano.
+ * The LED data line (Explorer IO 27) is PB04. PB04 has no SERCOM or TCC
+ * function, so the LEDs are driven by the bit-banging GPIO driver.
+ */
+
+#include <zephyr/dt-bindings/led/led.h>
+
+/ {
+	aliases {
+		led-strip = &rgb_ring;
+	};
+
+	rgb_ring: ws2812 {
+		compatible = "worldsemi,ws2812-gpio";
+		gpios = <&portb 4 GPIO_ACTIVE_HIGH>;
+		chain-length = <8>;
+		color-mapping = <LED_COLOR_ID_GREEN
+				 LED_COLOR_ID_RED
+				 LED_COLOR_ID_BLUE>;
+	};
+};

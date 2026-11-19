@@ -1,0 +1,62 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+*/
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+
+/ {
+    chosen {
+        zephyr,display = &ssd1306;
+    };
+
+    explorer_buttons: explorer-buttons {
+        compatible = "gpio-keys";
+        polling-mode;
+        debounce-interval-ms = <30>;
+
+        sw1: button_1 {
+            gpios = <&expander2 7 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+            label = "SW1";
+            zephyr,code = <INPUT_KEY_1>;
+        };
+
+        sw2: button_2 {
+            gpios = <&expander2 6 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+            label = "SW2";
+            zephyr,code = <INPUT_KEY_2>;
+        };
+
+        sw3: button_3 {
+            gpios = <&expander2 5 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+            label = "SW3";
+            zephyr,code = <INPUT_KEY_3>;
+        };
+    };
+};
+
+&sercom2 {
+    expander2: gpio@24 {
+        compatible = "microchip,mcp23008";
+        reg = <0x24>;
+        gpio-controller;
+        #gpio-cells = <2>;
+        status = "okay";
+    };
+
+    ssd1306: ssd1306@3d {
+        compatible = "solomon,ssd1306b";
+        reg = <0x3d>;
+
+        width = <128>;
+        height = <64>;
+        segment-offset = <0>;
+        page-offset = <0>;
+        display-offset = <0>;
+        multiplex-ratio = <63>;
+        prechargep = <0x22>;
+
+        segment-remap;
+        com-invdir;
+    };
+};

@@ -1,0 +1,30 @@
+/ {
+	chosen {
+		zephyr,display = &ssd1306;
+	};
+
+	aliases {
+		temperature-sensor = &temperature_sensor;
+	};
+};
+
+&sercom2 {
+	temperature_sensor: temperature_sensor@1c {
+		compatible = "microchip,mcp9808";
+		reg = <0x1c>;
+	};
+
+	ssd1306: ssd1306@3d {
+		compatible = "solomon,ssd1306b";
+		reg = <0x3d>;
+		segment-offset = <0>;
+		page-offset = <0>;
+		display-offset = <0>;
+		multiplex-ratio = <63>;
+		prechargep = <0x22>;
+		height = <64>;
+		width = <128>;
+		segment-remap;
+		com-invdir;
+	};
+};

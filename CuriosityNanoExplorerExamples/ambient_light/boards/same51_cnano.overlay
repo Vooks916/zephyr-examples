@@ -1,0 +1,34 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/*
+ * Curiosity Nano Explorer ambient light demo for the SAM E51 Curiosity Nano.
+ *
+ * Explorer I2C bus -> SAME51 PA12 (SDA) / PA13 (SCL), SERCOM2
+ *   - VCNL4200 light sensor @ 0x51 (no Zephyr driver, read directly in main.c)
+ *   - OLED (SSD1306, 128x64) @ 0x3D
+ *
+ * The board already enables SERCOM2 as a 400 kHz I2C controller, so this
+ * overlay only adds the OLED.
+ */
+
+/ {
+	chosen {
+		zephyr,display = &oled;
+	};
+};
+
+&sercom2 {
+	oled: ssd1306@3d {
+		compatible = "solomon,ssd1306";
+		reg = <0x3d>;
+		width = <128>;
+		height = <64>;
+		segment-offset = <0>;
+		page-offset = <0>;
+		display-offset = <0>;
+		multiplex-ratio = <63>;
+		segment-remap;
+		com-invdir;
+		prechargep = <0x22>;
+	};
+};

@@ -1,0 +1,25 @@
+/ {
+	chosen {
+		zephyr,display = &ssd1306;
+	};
+
+	aliases {
+		i2c-controller = &sercom2;
+	};
+};
+
+&sercom2 {
+	ssd1306: ssd1306@3d {
+		compatible = "solomon,ssd1306b";
+		reg = <0x3d>;
+		segment-offset = <0>;
+		page-offset = <0>;
+		display-offset = <0>;
+		multiplex-ratio = <63>;
+		prechargep = <0x22>;
+		height = <64>;
+		width = <128>;
+		segment-remap;
+		com-invdir;
+	};
+};

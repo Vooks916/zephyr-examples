@@ -1,0 +1,29 @@
+#include <dt-bindings/sam/sam_d5x_e5x/atsame51/atsame51j20a-pinctrl.h>
+#include <zephyr/dt-bindings/i2c/i2c.h>
+
+/{
+    chosen {
+        zephyr,display = &ssd1306;
+    };
+};
+
+&sercom2 {
+    vcnl4200: vcnl4200@51 {
+        reg = <0x51>;
+    };
+
+    ssd1306: ssd1306@3d {
+        status = "okay";
+        compatible = "solomon,ssd1306b";
+        reg = <0x3d>;
+        segment-offset = <0>;
+        page-offset = <0>;
+        display-offset = <0>;
+        multiplex-ratio = <63>;
+        prechargep = <0x22>;
+        height = <64>;
+        width = <128>;
+        segment-remap;
+        com-invdir;
+    };
+};
