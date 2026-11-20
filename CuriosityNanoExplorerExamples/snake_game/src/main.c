@@ -124,7 +124,7 @@ init:
 		uint8_t down = 0;
 		uint8_t push = 0;
 
-		for (int i = 0; i < 2; i++) {
+		for (int i = 0; i < 8; i++) {
 			uint8_t io_gpio_register;
 
 			if (i2c_reg_read_byte(i2c_controller, IO_EXPANDER_I2C_ADDRESS, IO_EXPANDER_GPIO_REGISTER, &io_gpio_register)) {
@@ -137,7 +137,7 @@ init:
 			down |= !(io_gpio_register & (1 << IO_EXPANDER_GPIO_JOYSTICK_DOWN));
 			push |= !(io_gpio_register & (1 << IO_EXPANDER_GPIO_JOYSTICK_PUSH));
 
-			k_sleep(K_MSEC(100));
+			k_sleep(K_MSEC(25));
 		}
 
 		if (game_over) {
