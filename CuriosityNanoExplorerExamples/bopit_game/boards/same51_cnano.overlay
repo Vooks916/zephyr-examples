@@ -1,0 +1,170 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/*
+ * Bop It! game - Curiosity Nano Explorer on the SAM E51 Curiosity Nano.
+ *
+ * Merged from the same51_cnano overlays of: ambient_light, proximity_sensor,
+ * capacitive_touch, joystick_oled, potentiometer_reading, temperature_sensor,
+ * rgb_ring, snake_game, microphone (branch `microphone`) and speaker (audio,
+ * commented out).
+ *
+ * Explorer I2C bus -> PA12 (SDA) / PA13 (SCL), SERCOM2, 400 kHz (board default, GCLK1 60 MHz)
+ *   - OLED SSD1306 128x64     @ 0x3D
+ *   - MCP23008 expander 2     @ 0x24 (joystick GP0..GP4, touch SW3..SW1 GP5..GP7)
+ *   - VCNL4200 prox + light   @ 0x51
+ *   - MCP9808 temperature     @ 0x1C
+ * ADC0:  AIN6 = PA06 microphone, AIN7 = PA07 potentiometer (as in examples)
+ * RGB ring WS2812B:   PB04 (Explorer IO 27), bit-banged GPIO driver
+ *
+ * Conflicts resolved (see README):
+ *  - OLED compatible: most examples use "solomon,ssd1306b", ambient_light and
+ *    joystick_oled use "solomon,ssd1306". The majority value is used; switch
+ *    if your Zephyr tree only knows the other one.
+ *  - MCP23008 @ 0x24: capacitive_touch bound Zephyr's "microchip,mcp23008"
+ *    GPIO driver + gpio-keys, joystick_oled/snake_game read it raw over I2C.
+ *    Two owners for one chip would fight over IODIR/GPPU, so the node has NO
+ *    compatible here and the app reads it raw for both joystick and touch.
+ *  - ADC reference: pot used ADC_REF_INTERNAL, mic ADC_REF_VDD_1. Both
+ *    channels are kept as in their examples; src/hw/analog.c re-runs
+ *    adc_channel_setup() when switching channel (REFCTRL is global).
+ *  - joystick_oled restated SERCOM2 (pinctrl, clocks). Not needed: the board
+ *    already enables SERCOM2 as I2C, the other examples rely on that.
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/adc/adc.h>
+#include <zephyr/dt-bindings/led/led.h>
+
+/ {
+	chosen {
+		zephyr,display = &ssd1306;
+	};
+
+	aliases {
+		temperature-sensor = &temperature_sensor;
+		led-strip = &rgb_ring;
+		i2c-controller = &sercom2;
+	};
+
+	zephyr,user {
+		io-channels = <&adc0 7>, <&adc0 6>;
+		io-channel-names = "potentiometer", "microphone";
+	};
+
+	rgb_ring: ws2812 {
+		compatible = "worldsemi,ws2812-gpio";
+		gpios = <&portb 4 GPIO_ACTIVE_HIGH>;
+		chain-length = <8>;
+		color-mapping = <LED_COLOR_ID_GREEN
+				 LED_COLOR_ID_RED
+				 LED_COLOR_ID_BLUE>;
+	};
+};
+
+&sercom2 {
+	ssd1306: ssd1306@3d {
+		compatible = "solomon,ssd1306b";
+		reg = <0x3d>;
+		width = <128>;
+		height = <64>;
+		segment-offset = <0>;
+		page-offset = <0>;
+		display-offset = <0>;
+		multiplex-ratio = <63>;
+		prechargep = <0x22>;
+		segment-remap;
+		com-invdir;
+	};
+
+	/* No compatible on purpose: read raw by src/hw/ioexp.c */
+	ioexp2: gpio@24 {
+		reg = <0x24>;
+	};
+
+	/* No Zephyr driver: read raw by src/hw/vcnl4200.c */
+	vcnl4200: vcnl4200@51 {
+		reg = <0x51>;
+	};
+
+	/* Compatible kept from temperature_sensor; CONFIG_SENSOR is off, read raw */
+	temperature_sensor: temperature_sensor@1c {
+		compatible = "microchip,mcp9808";
+		reg = <0x1c>;
+	};
+};
+
+&adc0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	/* Potentiometer (potentiometer_reading example) */
+	channel@7 {
+		reg = <7>;
+		zephyr,gain = "ADC_GAIN_1";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,resolution = <12>;
+		zephyr,input-positive = <7>;
+	};
+
+	/* Microphone (microphone branch) */
+	channel@6 {
+		reg = <6>;
+		zephyr,gain = "ADC_GAIN_1";
+		zephyr,reference = "ADC_REF_VDD_1";
+		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+		zephyr,resolution = <12>;
+		zephyr,input-positive = <6>;
+	};
+};
+
+/*
+ * AUDIO EXTENSION (speaker example) - uncomment when audio is implemented and
+ * copy dts/bindings/microchip,mcp4821.yaml + src/dac_mcp4821.c from the
+ * speaker example. Pins: SERCOM1 PA16 MOSI / PA17 SCK / PA19 MISO, DAC CS
+ * PB05, DAC LDAC PA03, SPEAKER ENABLE PB14.
+ * No pin conflict with anything above (I2C PA12/13, ADC PA06/07, ring PB04).
+ *
+ * &pinctrl {
+ *	sercom1_spi_default: sercom1_spi_default {
+ *		group1 {
+ *			pinmux = <PA16C_SERCOM1_PAD0>, <PA17C_SERCOM1_PAD1>,
+ *				 <PA19C_SERCOM1_PAD3>;
+ *		};
+ *	};
+ * };
+ *
+ * &sercom1 {
+ *	compatible = "microchip,sercom-g1-spi";
+ *	status = "okay";
+ *	#address-cells = <1>;
+ *	#size-cells = <0>;
+ *	dipo = <3>;
+ *	dopo = <0>;
+ *	pinctrl-0 = <&sercom1_spi_default>;
+ *	pinctrl-names = "default";
+ *	cs-gpios = <&portb 5 GPIO_ACTIVE_LOW>;
+ *	mcp4821: dac@0 {
+ *		compatible = "microchip,mcp4821";
+ *		reg = <0>;
+ *		spi-max-frequency = <1000000>;
+ *		#io-channel-cells = <1>;
+ *		gain-1x;
+ *		ldac-gpios = <&porta 3 GPIO_ACTIVE_HIGH>;
+ *	};
+ * };
+ *
+ * / {
+ *	speaker_ctrl {
+ *		compatible = "gpio-leds";
+ *		speaker_en: speaker_en {
+ *			gpios = <&portb 14 GPIO_ACTIVE_HIGH>;
+ *			label = "SPEAKER_ENABLE";
+ *		};
+ *	};
+ *	aliases {
+ *		speaker-dac = &mcp4821;
+ *		speaker-enable = &speaker_en;
+ *	};
+ * };
+ */
