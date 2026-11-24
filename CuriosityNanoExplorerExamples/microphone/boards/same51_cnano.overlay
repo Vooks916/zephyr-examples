@@ -1,0 +1,46 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+*/
+
+#include <zephyr/dt-bindings/adc/adc.h>
+
+/ {
+	chosen {
+		zephyr,display = &ssd1306;
+	};
+
+	zephyr,user {
+        io-channels = <&adc0 6>;
+        io-channel-names = "microphone";
+    };
+};
+
+&adc0 {
+    #address-cells = <1>;
+    #size-cells = <0>;
+
+    channel@6 {
+        reg = <6>;
+        zephyr,gain = "ADC_GAIN_1";
+        zephyr,reference = "ADC_REF_VDD_1";
+        zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+        zephyr,resolution = <12>;
+        zephyr,input-positive = <6>;
+    };
+};
+
+&sercom2 {
+	ssd1306: ssd1306@3d {
+		compatible = "solomon,ssd1306b";
+		reg = <0x3d>;
+		width = <128>;
+		height = <64>;
+		segment-offset = <0>;
+		page-offset = <0>;
+		display-offset = <0>;
+		multiplex-ratio = <63>;
+		segment-remap;
+		com-invdir;
+		prechargep = <0x22>;
+	};
+};
