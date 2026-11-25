@@ -1,5 +1,20 @@
-/*
- * SPDX-License-Identifier: Apache-2.0
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/* 
+ * Curiosity Nano Explorer logo touch demo.
+ * 
+ * Uses the SAM D21 Peripheral Touch Controller (PTC) to detect touch on
+ * the standalone capacitive touch button underneath the Microchip logo 
+ * on the Curiosity Nano Explorer and displays the button state, 
+ * current sensor reading, and baseline value on the 128 x 64 OLED display.
+ * 
+ * The open-source Adafruit PTC library is used to configure
+ * the PTC and read capacitive touch measurements.
+ * https://github.com/adafruit/Adafruit_FreeTouch
+ * 
+ * This demo only supports the SAM D21 Curiosity Nano.
+ * It will not work on the SAM E51 Curiosity Nano
+ * because it lacks open-source driver support.
  */
 
 #include <errno.h>
