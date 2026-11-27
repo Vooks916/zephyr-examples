@@ -35,7 +35,7 @@
 #define TOUCH_SAMPLE_PERIOD_MS 50U
 #define TOUCH_CALIBRATION_SAMPLES 32U
 #define TOUCH_PRESS_DELTA 18
-#define TOUCH_RELEASE_DELTA 3U
+#define TOUCH_RELEASE_DELTA 3
 #define TOUCH_CONVERSION_TIMEOUT_MS 20U
 
 static const struct device *const display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
